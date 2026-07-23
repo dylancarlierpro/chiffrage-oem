@@ -1,3 +1,5 @@
+*[Read this in English](README.en.md)*
+
 # Chiffrage OEM
 
 Application desktop (PyQt6, Windows) de calcul de prix unitaires OEM pour des
