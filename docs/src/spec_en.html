@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chiffrage OEM - Specification Document</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm 18mm 20mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #2b2620;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    margin: 0;
+  }
+  .banner {
+    background: #1c1c1c;
+    color: #f2ede2;
+    padding: 18px 22px;
+    margin: 0 0 18px 0;
+    border-radius: 6px;
+  }
+  .banner .tag { font-size: 8.5pt; letter-spacing: 3px; color: #b9b2a4; margin-bottom: 6px; }
+  .banner h1 { font-size: 17pt; margin: 0 0 8px 0; }
+  .banner p { margin: 0; font-size: 9.5pt; color: #d8d2c6; max-width: 90%; }
+  .stats { display: flex; gap: 10px; margin: 14px 0 22px 0; }
+  .stat { flex: 1; background: #f4efe4; border-radius: 6px; padding: 10px 12px; }
+  .stat .label { font-size: 7.5pt; letter-spacing: 1px; color: #7a7263; margin-bottom: 4px; }
+  .stat .value { font-size: 10pt; font-weight: bold; color: #2b2620; }
+  h2 { font-size: 12.5pt; color: #1c1c1c; border-bottom: 2px solid #34506b; padding-bottom: 4px; margin: 26px 0 10px 0; }
+  h2 .num { color: #34506b; margin-right: 6px; }
+  h3 { font-size: 10.5pt; margin: 16px 0 6px 0; color: #34506b; }
+  .formula {
+    background: #f4efe4; border-radius: 6px; padding: 14px 18px; text-align: center;
+    font-size: 12pt; font-weight: bold; margin: 10px 0 14px 0; letter-spacing: 0.5px;
+  }
+  ul.spec { margin: 6px 0; padding-left: 18px; }
+  ul.spec li { margin-bottom: 5px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 16px 0; font-size: 9.3pt; }
+  th { background: #34506b; color: white; text-align: left; padding: 6px 9px; font-size: 8.7pt; }
+  td { padding: 6px 9px; border-bottom: 1px solid #e6e0d2; vertical-align: top; }
+  tr:nth-child(even) td { background: #faf7f0; }
+  .waterfall td.num { text-align: right; }
+  .final-row td { background: #e3e8d8 !important; font-weight: bold; }
+  code, .mono { font-family: "Consolas", monospace; font-size: 9.2pt; }
+  pre.json {
+    background: #1c1c1c; color: #d8d2c6; padding: 12px 14px; border-radius: 6px;
+    font-size: 8.6pt; overflow-x: auto; line-height: 1.5; margin: 10px 0 16px 0;
+  }
+  .shot { margin: 10px 0 18px 0; page-break-inside: avoid; }
+  .shot img { width: 100%; border: 1px solid #ddd4c2; border-radius: 4px; }
+  .shot .cap { font-size: 8.8pt; color: #5a5348; margin-top: 5px; }
+  .shot .cap b { color: #2b2620; }
+  .pill { display: inline-block; background: #34506b; color: white; border-radius: 3px; padding: 1px 7px; font-size: 8pt; margin-right: 4px; }
+  .note {
+    background: #f4efe4; border-left: 3px solid #34506b; padding: 8px 12px; font-size: 9.3pt; margin: 10px 0 16px 0;
+  }
+  .section-break { page-break-before: always; }
+  .footer-line { text-align: center; font-size: 8pt; color: #9a9384; margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <div class="tag">C P I &nbsp; B Y &nbsp; H O W D E N &nbsp; — &nbsp; I N T E R N A L &nbsp; U S E</div>
+  <h1>Chiffrage OEM — Rings &amp; Segmentation</h1>
+  <p>What the OEM pricing calculator does, how it is built, and what just changed in it —
+  so the whole team can find its way around, today and six months from now
+  (<code>chiffrage_oem.py</code>).</p>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="label">STATUS</div><div class="value">In production — chiffrage_oem.py has been the official build since July 8, 2026</div></div>
+  <div class="stat"><div class="label">DOCUMENTED VERSION</div><div class="value">chiffrage_oem.py — 3,258 lines</div></div>
+  <div class="stat"><div class="label">DATE</div><div class="value">July 8, 2026</div></div>
+  <div class="stat"><div class="label">AUTHORS</div><div class="value">Dylan Carlier — initial design: N. Richet, R. Demeure</div></div>
+</div>
+
+<h2><span class="num">§1</span>Purpose of this document</h2>
+<p>Chiffrage OEM computes unit prices for sealing rings and segments (PTFE, PEEK) sold to
+compressor manufacturers. This document explains how it works, what it lets you do, and what
+just changed: the pricing logic, the data it handles, the interface we reworked, and the bugs
+we fixed along the way.</p>
+<p>The goal: a future user, a future administrator, or ourselves in six months, should be able
+to find their way around without having to re-read the whole codebase.</p>
+
+<h2><span class="num">§2</span>General overview</h2>
+<p>In practice: we start from a 2021 catalog price — the <b>PL21</b> — specific to a given part
+(a reference, a diameter, a geometry), and roll it forward in time. It is entered by hand at
+every calculation: the application does not store a parts catalog, only the pricing rules
+negotiated per client.</p>
+<p>Each client has its own trajectory: a series of cumulative annual increases (2022, 2023,
+2025, 2026…) reflecting cost changes, followed by a negotiated discount that brings the price
+down to what is actually invoiced. Fifteen clients already run in the tool by default —
+<i>Client A, Client B, Client D, Client G, Client H</i> — spread across two materials. Clients
+can be added, removed, or have their rates changed without touching a single line of code.</p>
+
+<h2><span class="num">§3</span>Pricing logic</h2>
+<p>All the logic fits in a single formula:</p>
+<div class="formula">price_final = ⌈ PL21 × ∏ (1 + rate<sub>year</sub>) × (1 + discount) ⌉</div>
+<ul class="spec">
+  <li><b>PL21</b> — 2021 catalog price, entered as a plain number (<span class="mono">620</span>),
+  an operation (<span class="mono">600 + 50</span>), or a percentage change
+  (<span class="mono">620 + 3%</span>).</li>
+  <li><b>rate<sub>year</sub></b> — increase specific to the (material, client) pair, applied
+  successively in chronological order.</li>
+  <li><b>discount</b> — rate negotiated with the client, stored as a negative value
+  (<span class="mono">-0.70</span> for -70%).</li>
+  <li><b>⌈⌉</b> — the result is rounded up to the nearest whole euro (final prices are always
+  displayed with no decimals, e.g. <span class="mono">207 €</span>); intermediate prices keep
+  two decimals.</li>
+</ul>
+<p>An example speaks better than a formula — <b>Client A, PTFE, PL21 = 620 €</b></p>
+<table class="waterfall">
+  <tr><th>Step</th><th>Rate</th><th>Price after</th></tr>
+  <tr><td>PL21</td><td>—</td><td class="num">620.00 €</td></tr>
+  <tr><td>2022</td><td>+0.0%</td><td class="num">620.00 €</td></tr>
+  <tr><td>2023</td><td>+7.0%</td><td class="num">663.40 €</td></tr>
+  <tr><td>2025</td><td>+0.0%</td><td class="num">663.40 €</td></tr>
+  <tr><td>2026</td><td>+4.0%</td><td class="num">689.94 €</td></tr>
+  <tr class="final-row"><td>Discount</td><td>-70.0%</td><td class="num">207 €</td></tr>
+</table>
+
+<h2><span class="num">§4</span>Data model</h2>
+<p>Nothing complicated on the storage side: everything lives in a single file,
+<code>chiffrage_data.json</code> — no database to install or maintain.</p>
+<pre class="json">{
+  "augmentations": {
+    "PTFE": { "Client A": { "2022": 0.00, "2023": 0.07, … }, … },
+    "PEEK": { … }
+  },
+  "remises": {
+    "PTFE": { "Client A": -0.70, … }, "PEEK": { … }
+  },
+  "remarques":  { "Client C": "Client B for Client C: Client C price - 20%", … },
+  "historique": [ { ts, pl21, matiere, client, prix_final }, … ],  // last 500 entries
+  "audit_log":  [ { ts, action, matiere, client, details }, … ],   // last 1,000 entries
+  "admin_hash": "pbkdf2_sha256$…"
+}</pre>
+<h3>File location</h3>
+<ul class="spec">
+  <li><b>Development machine</b> — next to the source script.</li>
+  <li><b>User machine</b> (once the app is installed) —
+  <span class="mono">%APPDATA%\CPI Howden\Chiffrage OEM\</span>. It had to be moved there:
+  Program Files refuses write access to standard accounts, and before this fix the app crashed
+  on the very first click on "Calculate". An automatic migration recovers data if an older
+  install had left it elsewhere.</li>
+</ul>
+
+<h2><span class="num">§5</span>Application architecture</h2>
+<p>Nothing exotic on the technical side:</p>
+<ul class="spec">
+  <li><b>Language / framework</b> — Python 3 + PyQt6, Fusion style (consistent rendering across
+  Windows/Mac/Linux).</li>
+  <li><b>Excel export</b> — optional, via <span class="mono">openpyxl</span>; disables cleanly
+  if the module is absent.</li>
+  <li><b>PDF export</b> — <span class="mono">QTextDocument</span> +
+  <span class="mono">QPrinter</span>, no external dependency.</li>
+  <li><b>Persistence</b> — a single JSON file, no locking: suited to single-workstation use, not
+  concurrent access (see §10).</li>
+</ul>
+<h3>Code organization</h3>
+<p>Everything lives in a single file, <code>chiffrage_oem.py</code> (3,258 lines as of today),
+split into 12 classes: <span class="mono">MainWindow</span> (main window),
+<span class="mono">ClientDetailPanel</span> (detail panel and waterfall),
+<span class="mono">WaterfallChart</span> (hand-painted visualization, no charting library),
+<span class="mono">ClientListItem</span>, <span class="mono">StatCard</span>,
+<span class="mono">Toast</span>, <span class="mono">TitlebarThemer</span>, and the five admin
+dialogs (<span class="mono">EditClientDialog</span>, <span class="mono">AddClientDialog</span>,
+<span class="mono">ChangePasswordDialog</span>, <span class="mono">AuditLogDialog</span>,
+<span class="mono">HistoriqueDialog</span>).</p>
+
+<h2><span class="num">§6</span>Features</h2>
+<h3>6.1 — Input &amp; calculation</h3>
+<ul class="spec">
+  <li>Material selector (<span class="pill">PTFE</span> / <span class="pill">PEEK</span> by
+  default, extensible without coding).</li>
+  <li>PL21 field accepting three formats, with a live preview of the result: plain number
+  (<span class="mono">620</span>), operation (<span class="mono">600 + 50</span>), percentage
+  change (<span class="mono">620 + 3%</span>).</li>
+  <li>"Calculate" (or Enter) prices every visible client — respecting the active search filter —
+  and logs each calculation to the history.</li>
+  <li>Client search filter (<span class="mono">Ctrl+F</span>), keyboard navigation
+  ↑ / ↓ in the list.</li>
+</ul>
+<h3>6.2 — Calculation visualization</h3>
+<p>The detail panel tells the story of the calculation rather than just giving a number: the
+PL21 at the bottom, each increase stacking on top of it, then the discount eating into a share
+of the total — visible at a glance thanks to a hatched gradient. Three small cards summarize
+the essentials (total increase, discount, final price), and the final price copies with one
+click when it needs to be shared quickly.</p>
+<h3>6.3 — Administration <span style="font-weight:normal;color:#5a5348;">(password-protected)</span></h3>
+<ul class="spec">
+  <li>Add / remove a client — removal takes the client out of every material at once.</li>
+  <li>Add a material — inherits the existing client list, rates initialized at 0%.</li>
+  <li>Edit a client's annual rates and remark — years can be added and removed dynamically.</li>
+  <li>Edit a client's discount — the only action reachable without a password from the detail
+  panel, a frequent day-to-day gesture.</li>
+  <li>Change the administrator password.</li>
+</ul>
+<h3>6.4 — Exports</h3>
+<ul class="spec">
+  <li><b>CSV</b> — ";" separator, UTF-8 with BOM encoding (Excel compatibility).</li>
+  <li><b>Excel (.xlsx)</b> — formatted with material colors, final prices in green.</li>
+  <li><b>PDF</b> — detailed sheet per client, or a summary for an entire material.</li>
+</ul>
+<h3>6.5 — Traceability</h3>
+<ul class="spec">
+  <li>Calculation history (date, material, client, PL21, resulting price) — last 500 entries,
+  viewable and clearable.</li>
+  <li>Administrative action audit log — last 1,000 entries, read-only.</li>
+</ul>
+
+<div class="section-break"></div>
+
+<h2><span class="num">§7</span>Screenshots</h2>
+<p>Rather than describe the interface, better to show it: the main screen in light and dark
+mode, the administration dialog, and a PDF export generated by the app itself — not a mock-up.</p>
+
+<div class="shot">
+  <img src="screenshots/screenshot_0.png">
+  <div class="cap"><b>Light theme — PTFE material.</b> PL21 entered as a percentage
+  (620 + 3%); calculation waterfall, summary cards, and a discount of -70%.</div>
+</div>
+<div class="shot">
+  <img src="screenshots/screenshot_1.png">
+  <div class="cap"><b>Dark theme — PEEK material.</b> All 15 clients priced at once in the
+  sidebar; amber accent specific to PEEK on the discount and final price.</div>
+</div>
+<div class="shot" style="width:55%">
+  <img src="screenshots/screenshot_2.png">
+  <div class="cap"><b>Administration — edit a client.</b> Annual rates addable/removable
+  dynamically, free-text remark; reached via "⚙ Edit", password-protected.</div>
+</div>
+<div class="shot">
+  <img src="screenshots/screenshot_3.png">
+  <div class="cap"><b>Client PDF export.</b> Sheet generated by "PDF" in the detail panel —
+  table of calculation steps and final price highlighted.</div>
+</div>
+
+<div class="section-break"></div>
+
+<h2><span class="num">§8</span>Changelog — interface polish</h2>
+<p>This iteration was spent polishing the interface: animations and transitions designed to
+stay within the "technical sheet" spirit already in place (warm paper tones, PTFE/PEEK
+accents) — not added just for the sake of it.</p>
+<ul class="spec">
+  <li><b>Animated waterfall</b> — the columns "grow" from the base one after another, slightly
+  staggered, instead of appearing all at once: the formula builds itself in front of the
+  user's eyes.</li>
+  <li><b>Animated counters</b> — the final price and total increase roll up to their new value
+  (odometer effect, ~400 ms).</li>
+  <li><b>Client-change fade</b> — the detail panel fades in (160 ms) instead of a hard swap.</li>
+  <li><b>Toast notification</b> — a sliding, self-dismissing confirmation for copying the final
+  price.</li>
+  <li><b>Theme cross-fade</b> — light/dark switch via screenshot capture + fade (260 ms), no
+  more flicker.</li>
+  <li><b>Material color transition</b> — the Calculate button slides from PTFE steel blue to
+  PEEK amber (240 ms) on material change.</li>
+  <li><b>Waterfall hover</b> — highlighted column and tooltip detailing the step (price before →
+  rate → price after).</li>
+  <li><b>Themed Windows title bar</b> — dark in dark mode; thin scrollbars in the theme's
+  colors.</li>
+  <li><b>Enlarged waterfall</b> — height 210→270 px, columns 60→76 px, price font 8→12 pt, for
+  better readability of the calculation detail. Enlarged after review: it felt too dense to
+  read the detail quickly.</li>
+  <li><b>"Flash" halo on each client row on recalculation</b> — implemented, then removed.
+  Removed after review: it looked more like a display glitch than a real signal.</li>
+</ul>
+
+<div class="section-break"></div>
+
+<h2><span class="num">§9</span>Reliability &amp; security — findings from the code review</h2>
+<p>We re-read all of <code>chiffrage_oem.py</code> looking for anything that could go wrong:
+unhandled errors, unchecked inputs. Eight issues stopped us — all fixed, and verified by 18
+automated checks plus a full replay of the interface scenario, without breaking anything along
+the way.</p>
+<table>
+  <tr><th>#</th><th>What we found</th><th>What could happen</th><th>What we did</th></tr>
+  <tr><td>01</td><td>The "base − discount%" formula let a zero or negative PL21 through</td>
+  <td>Division by zero at calculation time, or worse: a negative price displayed as if nothing
+  were wrong</td><td>The sign of the result is now checked before being accepted</td></tr>
+  <tr><td>02</td><td>Writing the data file was not atomic</td>
+  <td>A crash or power outage mid-write truncates the JSON — and with it, every negotiated
+  discount and remark</td><td>We now write to a temporary file, then swap it in one operation
+  (<span class="mono">os.replace</span>)</td></tr>
+  <tr><td>03</td><td>A corrupted file was replaced without warning anyone</td>
+  <td>Invisible data loss — no trace, no warning</td><td>The file is renamed to
+  <span class="mono">.corrompu.bak</span> and kept, with a clear message on startup</td></tr>
+  <tr><td>04</td><td>Client names, materials, or remarks were not escaped in exported PDFs</td>
+  <td>A single "&amp;" or "&lt;" in a name is enough to break the document's rendering</td>
+  <td>All free text now goes through systematic HTML escaping</td></tr>
+  <tr><td>05</td><td>CSV / Excel exports were vulnerable to formula injection</td>
+  <td>A client name starting with <span class="mono">=</span>, <span class="mono">+</span>,
+  <span class="mono">-</span> or <span class="mono">@</span> executes as a formula when opened
+  in Excel (CWE-1236)</td><td>A neutralizing prefix is now added automatically on the affected
+  fields</td></tr>
+  <tr><td>06</td><td>Exporting to a file already open elsewhere (Excel, a PDF reader…)</td>
+  <td>Surfaced a generic, unreadable error — "an unexpected error occurred…"</td>
+  <td>The message now clearly states what most likely happened</td></tr>
+  <tr><td>07</td><td>Adding a client right after removing the last one of a material</td>
+  <td>Crashed the app (<span class="mono">IndexError</span>), barely caught by the global
+  filter</td><td>The app now falls back cleanly to another existing material</td></tr>
+  <tr><td>08</td><td>Adding a material on a dataset emptied by hand</td>
+  <td>Same potential issue (<span class="mono">IndexError</span>), if someone edits the JSON
+  directly</td><td>A defensive guard now covers this case</td></tr>
+</table>
+
+<h2><span class="num">§10</span>Known limitations &amp; recommendations</h2>
+<div class="note">
+  <b>Administrator password</b> — at the time this document was written, the SHA-256 hash was
+  unsalted and the default password was written in plain text in the code. This has since been
+  hardened: the hash is now salted (PBKDF2-HMAC-SHA256) and a random password is generated at
+  first launch instead of a fixed default. For a single-workstation app, the real security
+  boundary remains physical access to the machine rather than this password.
+</div>
+<ul class="spec">
+  <li><b>No concurrent access handling</b> — a single JSON file, no locking. Two people
+  modifying the data at the same time would overwrite each other. No consequence as long as the
+  tool stays on a single workstation, which is the case today.</li>
+  <li><b>No versioned test suite</b> — this iteration's checks (interface scenario, error
+  checks) were written for the occasion and run by hand, without being kept in the
+  repository.</li>
+</ul>
+
+<h2><span class="num">§11</span>Dependencies &amp; distribution</h2>
+<ul class="spec">
+  <li><b>Required</b> — Python 3, PyQt6.</li>
+  <li><b>Optional</b> — openpyxl (disables Excel export if absent, without error).</li>
+  <li><b>Packaging</b> — PyInstaller (<span class="mono">--onefile --windowed</span>), Inno
+  Setup installer, dynamic versioning via <span class="mono">release.ps1</span>.</li>
+</ul>
+
+<h2><span class="num">§12</span>Glossary</h2>
+<table>
+  <tr><th>Term</th><th>Definition</th></tr>
+  <tr><td>PL21</td><td>Reference catalog price (2021 list), entered per part at each
+  calculation.</td></tr>
+  <tr><td>Material</td><td>Material family (PTFE, PEEK…); carries its own rates and discounts
+  per client.</td></tr>
+  <tr><td>Annual increase rate</td><td>Cumulative annual increase applied to the PL21, specific
+  to each (material, client) pair.</td></tr>
+  <tr><td>Discount</td><td>Final negotiated rate, brings the price down to the agreed
+  commercial level.</td></tr>
+  <tr><td>Waterfall</td><td>Step-by-step visualization of how the price is built.</td></tr>
+</table>
+
+<div class="footer-line">Chiffrage OEM — CPI by Howden. Created by Dylan Carlier, conceived
+with Nicolas Richet and Robin Demeure.<br>Written from the source code and this iteration's
+work. English translation of the original French specification document.</div>
+
+</body>
+</html>

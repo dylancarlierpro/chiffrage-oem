@@ -11,6 +11,14 @@ Howden** (anciennement CPI Liard).
 > présentes ni accessibles depuis ce dépôt (fichier `chiffrage_data.json`
 > volontairement exclu du dépôt, voir `.gitignore`).
 
+![Chiffrage OEM — écran principal](docs/src/screenshots/screenshot_0.png)
+
+## Documentation
+
+Dossier de spécifications complet (principe de calcul, architecture, revue de
+fiabilité/sécurité, captures d'écran) : [FR](docs/Chiffrage_OEM_-_Dossier_de_specifications.pdf) ·
+[EN](docs/Chiffrage_OEM_-_Dossier_de_specifications_EN.pdf).
+
 ## Principe métier
 
 On part d'un prix catalogue de référence (« PL21 ») saisi par l'utilisateur,
