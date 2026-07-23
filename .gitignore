@@ -1,0 +1,13 @@
+# Données sensibles (clients réels, tarifs négociés) — restent locales uniquement
+chiffrage_data.json
+
+# Artefacts de build (régénérés par build.ps1)
+build/
+dist/
+installeur/
+*.spec
+logo_cpi.ico
+
+# Python
+__pycache__/
+*.pyc
