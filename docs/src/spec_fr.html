@@ -27,7 +27,7 @@
   .stat { flex: 1; background: #f4efe4; border-radius: 6px; padding: 10px 12px; }
   .stat .label { font-size: 7.5pt; letter-spacing: 1px; color: #7a7263; margin-bottom: 4px; }
   .stat .value { font-size: 10pt; font-weight: bold; color: #2b2620; }
-  h2 { font-size: 12.5pt; color: #1c1c1c; border-bottom: 2px solid #34506b; padding-bottom: 4px; margin: 26px 0 10px 0; }
+  h2 { font-size: 12.5pt; color: #1c1c1c; border-bottom: 2px solid #34506b; padding-bottom: 4px; margin: 18px 0 8px 0; }
   h2 .num { color: #34506b; margin-right: 6px; }
   h3 { font-size: 10.5pt; margin: 16px 0 6px 0; color: #34506b; }
   .formula {
@@ -37,8 +37,8 @@
   ul.spec { margin: 6px 0; padding-left: 18px; }
   ul.spec li { margin-bottom: 5px; }
   table { border-collapse: collapse; width: 100%; margin: 10px 0 16px 0; font-size: 9.3pt; }
-  th { background: #34506b; color: white; text-align: left; padding: 6px 9px; font-size: 8.7pt; }
-  td { padding: 6px 9px; border-bottom: 1px solid #e6e0d2; vertical-align: top; }
+  th { background: #34506b; color: white; text-align: left; padding: 5px 9px; font-size: 8.7pt; }
+  td { padding: 5px 9px; border-bottom: 1px solid #e6e0d2; vertical-align: top; }
   tr:nth-child(even) td { background: #faf7f0; }
   .waterfall td.num { text-align: right; }
   .final-row td { background: #e3e8d8 !important; font-weight: bold; }
@@ -47,16 +47,18 @@
     background: #1c1c1c; color: #d8d2c6; padding: 12px 14px; border-radius: 6px;
     font-size: 8.6pt; overflow-x: auto; line-height: 1.5; margin: 10px 0 16px 0;
   }
-  .shot { margin: 10px 0 18px 0; page-break-inside: avoid; }
+  .shots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 16px 0; }
+  .shot { margin: 0; page-break-inside: avoid; align-self: start; }
   .shot img { width: 100%; border: 1px solid #ddd4c2; border-radius: 4px; }
-  .shot .cap { font-size: 8.8pt; color: #5a5348; margin-top: 5px; }
+  .shot .cap { font-size: 8.3pt; color: #5a5348; margin-top: 4px; }
   .shot .cap b { color: #2b2620; }
   .pill { display: inline-block; background: #34506b; color: white; border-radius: 3px; padding: 1px 7px; font-size: 8pt; margin-right: 4px; }
   .note {
     background: #f4efe4; border-left: 3px solid #34506b; padding: 8px 12px; font-size: 9.3pt; margin: 10px 0 16px 0;
   }
-  .section-break { page-break-before: always; }
-  .footer-line { text-align: center; font-size: 8pt; color: #9a9384; margin-top: 30px; }
+  .section-break { page-break-before: auto; }
+  h2 { page-break-after: avoid; }
+  .footer-line { text-align: center; font-size: 8pt; color: #9a9384; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -220,6 +222,7 @@ vite.</p>
 sombre, le dialogue d'administration, et un export PDF généré par l'appli elle-même — pas une
 maquette.</p>
 
+<div class="shots-grid">
 <div class="shot">
   <img src="screenshots/screenshot_0.png">
   <div class="cap"><b>Thème clair — matière PTFE.</b> PL21 saisi en pourcentage (620 + 3 %) ;
@@ -230,7 +233,7 @@ maquette.</p>
   <div class="cap"><b>Thème sombre — matière PEEK.</b> Les 15 clients chiffrés d'un coup dans la
   sidebar ; accent ambre propre au PEEK sur la remise et le prix final.</div>
 </div>
-<div class="shot" style="width:55%">
+<div class="shot">
   <img src="screenshots/screenshot_2.png">
   <div class="cap"><b>Administration — modifier un client.</b> Taux annuels ajoutables/supprimables
   dynamiquement, remarque libre ; accessible via « ⚙ Modifier », protégé par mot de passe.</div>
@@ -240,8 +243,7 @@ maquette.</p>
   <div class="cap"><b>Export PDF client.</b> Fiche générée par « PDF » dans le panneau de détail
   — tableau des étapes de calcul et prix final mis en évidence.</div>
 </div>
-
-<div class="section-break"></div>
+</div>
 
 <h2><span class="num">§8</span>Journal des évolutions — comment on a peaufiné l'interface</h2>
 <p>Cette itération, on l'a passée à peaufiner l'interface : des animations et des transitions
